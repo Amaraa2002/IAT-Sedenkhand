@@ -243,54 +243,71 @@ async function preloadImages() {
 // Монгол зүйлс (target = left in compatible, right in incompatible)
 // 7 image keys for Mongol side, 7 for Gadaad side — 1 per part
 const MONGOL_IMGS = ['mongol_flag','mongol_map','mongol_money','mongol_suld','mongol_soyombo'];
-const GADAAD_IMGS = ['oros','gazriin_zurag','turiin_dalbaa','dollar','solongos'];
+const GADAAD_IMGS  = ['oros','gazriin_zurag','turiin_dalbaa','dollar','solongos'];
 
-// Left (E) and Right (I) category label pairs for each of the 7 parts
-const PART_CATS = [
-  { left:'Эерэг',      right:'Сөрөг'     },
-  { left:'Гал голомт', right:'Сүйрэл'    },
-  { left:'Үнэт зүйл',  right:'Аюултай'   },
-  { left:'Амжилт',     right:'Сул дорой' },
-  { left:'Газар нутаг',right:'Доройтол'  },
-  { left:'Эх хэл',     right:'Гадуурхах' },
-  { left:'Нэр төр',    right:'Авлига'    },
-];
+// Positive and negative attribute words
+const POS_WORDS = ['Эерэг','Гал голомт','Үнэт зүйл','Амжилт','Газар нутаг','Эх хэл','Нэр төр'];
+const NEG_WORDS = ['Сөрөг','Сүйрэл','Аюултай','Сул дорой','Доройтол','Гадуурхах','Авлига'];
 
-/* Part instructions — all image-based, categories change each part */
+/*
+  IAT БҮТЭЦ (стандарт):
+  Блок 1 (20): Практик — Гадаад орон vs Монгол орон (зураг)
+  Блок 2 (20): Практик — Сөрөг vs Эерэг (үг)
+  Блок 3 (20): Практик — Гадаад+Сөрөг vs Монгол+Эерэг (зураг+үг)
+  Блок 4 (40): Тест    — Гадаад+Сөрөг vs Монгол+Эерэг (зураг+үг)  ← D тооцоо
+  Блок 5 (20): Практик — Монгол орон vs Гадаад орон (зураг, эргэсэн)
+  Блок 6 (20): Практик — Монгол+Сөрөг vs Гадаад+Эерэг (зураг+үг)
+  Блок 7 (40): Тест    — Монгол+Сөрөг vs Гадаад+Эерэг (зураг+үг)  ← D тооцоо
+
+  D₁ = (RT_блок6 − RT_блок3) / SD(блок3,6)
+  D₂ = (RT_блок7 − RT_блок4) / SD(блок4,7)
+  D  = (D₁ + D₂) / 2
+*/
+
 const PART_INSTRUCTIONS = [
-  `<strong>Эерэг ба Сөрөг</strong><br><br>
-  Эерэг санааг илэрхийлэх зураг гарч ирвэл <strong style="color:#1a5276">E</strong> товч дараарай.<br>
-  Сөрөг санааг илэрхийлэх зураг гарч ирвэл <strong style="color:#c0392b">I</strong> товч дараарай.<br>
+  // Блок 1: зураг — Гадаад (E) vs Монгол (I)
+  `<strong>Блок 1: Гадаад орон ба Монгол орон</strong><br><br>
+  <strong style="color:#1a5276">Гадаад орон</strong>-той холбоотой зураг гарч ирвэл <strong style="color:#1a5276">E</strong> товч дараарай.<br>
+  <strong style="color:#c0392b">Монгол орон</strong>-той холбоотой зураг гарч ирвэл <strong style="color:#c0392b">I</strong> товч дараарай.<br>
   Буруу хариулвал улаан X гарна. Зөв хариулахын зэрэгцээ аль болох хурдан хариулаарай.`,
 
-  `<strong>Гал голомт ба Сүйрэл</strong><br><br>
-  Гал голомт (эх орон, гэр, халуун дулаан) санааг илэрхийлэх зураг гарвал <strong style="color:#1a5276">E</strong> товч дараарай.<br>
-  Сүйрэл (устгал, аюул) санааг илэрхийлэх зураг гарвал <strong style="color:#c0392b">I</strong> товч дараарай.<br>
+  // Блок 2: үг — Сөрөг (E) vs Эерэг (I)
+  `<strong>Блок 2: Сөрөг ба Эерэг үгс</strong><br><br>
+  <strong style="color:#1a5276">Сөрөг</strong> үг гарч ирвэл <strong style="color:#1a5276">E</strong> товч дараарай.<br>
+  <strong style="color:#c0392b">Эерэг</strong> үг гарч ирвэл <strong style="color:#c0392b">I</strong> товч дараарай.<br>
+  Буруу хариулвал улаан X гарна. Зөв хариулахын зэрэгцээ аль болох хурдан хариулаарай.`,
+
+  // Блок 3: зураг+үг — Гадаад+Сөрөг (E) vs Монгол+Эерэг (I)
+  `<strong>Блок 3: Гадаад орон+Сөрөг ба Монгол орон+Эерэг</strong><br><br>
+  <strong style="color:#1a5276">Гадаад орон</strong>-той зураг эсвэл <strong style="color:#1a5276">Сөрөг</strong> үг гарвал <strong style="color:#1a5276">E</strong> товч дараарай.<br>
+  <strong style="color:#c0392b">Монгол орон</strong>-той зураг эсвэл <strong style="color:#c0392b">Эерэг</strong> үг гарвал <strong style="color:#c0392b">I</strong> товч дараарай.<br>
   Буруу хариулвал улаан X гарна. Хурдан хариулаарай.`,
 
-  `<strong>Үнэт зүйл ба Аюултай</strong><br><br>
-  Үнэт зүйл (эрхэм, чухал) санааг илэрхийлэх зураг гарвал <strong style="color:#1a5276">E</strong> товч дараарай.<br>
-  Аюултай санааг илэрхийлэх зураг гарвал <strong style="color:#c0392b">I</strong> товч дараарай.<br>
+  // Блок 4: зураг+үг — Гадаад+Сөрөг (E) vs Монгол+Эерэг (I) — тест
+  `<strong>Блок 4: Гадаад орон+Сөрөг ба Монгол орон+Эерэг (давталт)</strong><br><br>
+  Өмнөх хэсэгтэй адил.<br>
+  <strong style="color:#1a5276">Гадаад орон</strong>-той зураг эсвэл <strong style="color:#1a5276">Сөрөг</strong> үг → <strong style="color:#1a5276">E</strong><br>
+  <strong style="color:#c0392b">Монгол орон</strong>-той зураг эсвэл <strong style="color:#c0392b">Эерэг</strong> үг → <strong style="color:#c0392b">I</strong><br>
   Буруу хариулвал улаан X гарна. Хурдан хариулаарай.`,
 
-  `<strong>Амжилт ба Сул дорой</strong><br><br>
-  Амжилт, хөгжил санааг илэрхийлэх зураг гарвал <strong style="color:#1a5276">E</strong> товч дараарай.<br>
-  Сул дорой, доройтлын санааг илэрхийлэх зураг гарвал <strong style="color:#c0392b">I</strong> товч дараарай.<br>
+  // Блок 5: зураг — Монгол (E) vs Гадаад (I) эргэсэн
+  `<strong>Блок 5: Монгол орон ба Гадаад орон (байрлал солигдсон)</strong><br><br>
+  Анхааралтай! Байрлал солигдлоо.<br>
+  <strong style="color:#1a5276">Монгол орон</strong>-той холбоотой зураг гарч ирвэл <strong style="color:#1a5276">E</strong> товч дараарай.<br>
+  <strong style="color:#c0392b">Гадаад орон</strong>-той холбоотой зураг гарч ирвэл <strong style="color:#c0392b">I</strong> товч дараарай.<br>
   Буруу хариулвал улаан X гарна. Хурдан хариулаарай.`,
 
-  `<strong>Газар нутаг ба Доройтол</strong><br><br>
-  Газар нутаг, эх орны санааг илэрхийлэх зураг гарвал <strong style="color:#1a5276">E</strong> товч дараарай.<br>
-  Доройтлын санааг илэрхийлэх зураг гарвал <strong style="color:#c0392b">I</strong> товч дараарай.<br>
+  // Блок 6: зураг+үг — Монгол+Сөрөг (E) vs Гадаад+Эерэг (I)
+  `<strong>Блок 6: Монгол орон+Сөрөг ба Гадаад орон+Эерэг</strong><br><br>
+  <strong style="color:#1a5276">Монгол орон</strong>-той зураг эсвэл <strong style="color:#1a5276">Сөрөг</strong> үг гарвал <strong style="color:#1a5276">E</strong> товч дараарай.<br>
+  <strong style="color:#c0392b">Гадаад орон</strong>-той зураг эсвэл <strong style="color:#c0392b">Эерэг</strong> үг гарвал <strong style="color:#c0392b">I</strong> товч дараарай.<br>
   Буруу хариулвал улаан X гарна. Хурдан хариулаарай.`,
 
-  `<strong>Эх хэл ба Гадуурхах</strong><br><br>
-  Эх хэл, уламжлалын санааг илэрхийлэх зураг гарвал <strong style="color:#1a5276">E</strong> товч дараарай.<br>
-  Гадуурхах, үгүйсгэх санааг илэрхийлэх зураг гарвал <strong style="color:#c0392b">I</strong> товч дараарай.<br>
-  Буруу хариулвал улаан X гарна. Хурдан хариулаарай.`,
-
-  `<strong>Нэр төр ба Авлига</strong><br><br>
-  Нэр төр, шударга байдлын санааг илэрхийлэх зураг гарвал <strong style="color:#1a5276">E</strong> товч дараарай.<br>
-  Авлига, шударга бус байдлын санааг илэрхийлэх зураг гарвал <strong style="color:#c0392b">I</strong> товч дараарай.<br>
+  // Блок 7: зураг+үг — Монгол+Сөрөг (E) vs Гадаад+Эерэг (I) — тест
+  `<strong>Блок 7: Монгол орон+Сөрөг ба Гадаад орон+Эерэг (давталт)</strong><br><br>
+  Өмнөх хэсэгтэй адил.<br>
+  <strong style="color:#1a5276">Монгол орон</strong>-той зураг эсвэл <strong style="color:#1a5276">Сөрөг</strong> үг → <strong style="color:#1a5276">E</strong><br>
+  <strong style="color:#c0392b">Гадаад орон</strong>-той зураг эсвэл <strong style="color:#c0392b">Эерэг</strong> үг → <strong style="color:#c0392b">I</strong><br>
   Буруу хариулвал улаан X гарна. Хурдан хариулаарай.`
 ];
 
@@ -334,32 +351,59 @@ const GADAAD_ITEMS = GADAAD_IMGS.map(imgItem);
 
 // 7 parts
 function buildPartConfigs() {
-  // Parts 1-4: Mongol=E (left), Gadaad=I (right)  → "Монгол = Эерэг тал" (compatible)
-  // Parts 5-7: Gadaad=E (left), Mongol=I (right)   → "Монгол = Сөрөг тал" (incompatible/flipped)
-  // This gives standard IAT compatible vs incompatible blocks
-  const configs = [];
-  PART_CATS.forEach((cat, idx) => {
-    let leftItems, rightItems, leftCat, rightCat;
-    if(idx < 4) {
-      // Compatible: Mongol left (E), Gadaad right (I)
-      leftItems  = MONGOL_IMGS.map(k => ({type:'img', key:k}));
-      rightItems = GADAAD_IMGS.map(k => ({type:'img', key:k}));
-      leftCat  = cat.left;
-      rightCat = cat.right;
-    } else {
-      // Incompatible: Gadaad left (E), Mongol right (I)
-      leftItems  = GADAAD_IMGS.map(k => ({type:'img', key:k}));
-      rightItems = MONGOL_IMGS.map(k => ({type:'img', key:k}));
-      leftCat  = cat.right;  // e.g. "Гадуурхах"
-      rightCat = cat.left;   // e.g. "Эх хэл"
-    }
-    const config = makePartConfig(leftCat, rightCat, leftItems, rightItems, 20);
-    config.leftWords = [];
-    config.rightWords = [];
-    config.isCompatible = (idx < 4);
-    configs.push(config);
-  });
-  return configs;
+  const M = MONGOL_IMGS.map(k => ({type:'img', key:k}));
+  const G = GADAAD_IMGS.map(k => ({type:'img', key:k}));
+  const P = POS_WORDS.map(t => ({type:'word', text:t}));
+  const N = NEG_WORDS.map(t => ({type:'word', text:t}));
+
+  return [
+    // Блок 1 (20): Гадаад(E) vs Монгол(I) — зураг
+    { leftCat:'Гадаад орон', rightCat:'Монгол орон',
+      items: shuffle([...pickN(G,10).map(i=>({...i,side:'left'})), ...pickN(M,10).map(i=>({...i,side:'right'}))]),
+      leftWords:[], rightWords:[], blockType:'practice_img' },
+
+    // Блок 2 (20): Сөрөг(E) vs Эерэг(I) — үг
+    { leftCat:'Сөрөг', rightCat:'Эерэг',
+      items: shuffle([...pickN(N,10).map(i=>({...i,side:'left'})), ...pickN(P,10).map(i=>({...i,side:'right'}))]),
+      leftWords: NEG_WORDS, rightWords: POS_WORDS, blockType:'practice_word' },
+
+    // Блок 3 (20): Гадаад+Сөрөг(E) vs Монгол+Эерэг(I) — зураг+үг
+    { leftCat:'Гадаад орон + Сөрөг', rightCat:'Монгол орон + Эерэг',
+      items: shuffle([
+        ...pickN(G,5).map(i=>({...i,side:'left'})), ...pickN(N,5).map(i=>({...i,side:'left'})),
+        ...pickN(M,5).map(i=>({...i,side:'right'})), ...pickN(P,5).map(i=>({...i,side:'right'}))
+      ]),
+      leftWords: NEG_WORDS, rightWords: POS_WORDS, blockType:'practice_combined' },
+
+    // Блок 4 (40): Гадаад+Сөрөг(E) vs Монгол+Эерэг(I) — тест
+    { leftCat:'Гадаад орон + Сөрөг', rightCat:'Монгол орон + Эерэг',
+      items: shuffle([
+        ...pickN(G,10).map(i=>({...i,side:'left'})), ...pickN(N,10).map(i=>({...i,side:'left'})),
+        ...pickN(M,10).map(i=>({...i,side:'right'})), ...pickN(P,10).map(i=>({...i,side:'right'}))
+      ]),
+      leftWords: NEG_WORDS, rightWords: POS_WORDS, blockType:'test_compatible' },
+
+    // Блок 5 (20): Монгол(E) vs Гадаад(I) — зураг, эргэсэн
+    { leftCat:'Монгол орон', rightCat:'Гадаад орон',
+      items: shuffle([...pickN(M,10).map(i=>({...i,side:'left'})), ...pickN(G,10).map(i=>({...i,side:'right'}))]),
+      leftWords:[], rightWords:[], blockType:'practice_img_reversed' },
+
+    // Блок 6 (20): Монгол+Сөрөг(E) vs Гадаад+Эерэг(I) — зураг+үг
+    { leftCat:'Монгол орон + Сөрөг', rightCat:'Гадаад орон + Эерэг',
+      items: shuffle([
+        ...pickN(M,5).map(i=>({...i,side:'left'})), ...pickN(N,5).map(i=>({...i,side:'left'})),
+        ...pickN(G,5).map(i=>({...i,side:'right'})), ...pickN(P,5).map(i=>({...i,side:'right'}))
+      ]),
+      leftWords: NEG_WORDS, rightWords: POS_WORDS, blockType:'practice_combined_reversed' },
+
+    // Блок 7 (40): Монгол+Сөрөг(E) vs Гадаад+Эерэг(I) — тест
+    { leftCat:'Монгол орон + Сөрөг', rightCat:'Гадаад орон + Эерэг',
+      items: shuffle([
+        ...pickN(M,10).map(i=>({...i,side:'left'})), ...pickN(N,10).map(i=>({...i,side:'left'})),
+        ...pickN(G,10).map(i=>({...i,side:'right'})), ...pickN(P,10).map(i=>({...i,side:'right'}))
+      ]),
+      leftWords: NEG_WORDS, rightWords: POS_WORDS, blockType:'test_incompatible' },
+  ];
 }
 
 /* ---- State ---- */
@@ -453,19 +497,8 @@ function startPart() {
 }
 
 function populateWordLists(config) {
-  // Show attribute words listed under categories (only for parts with words)
-  const leftWordsEl = document.getElementById('stageLeftWords');
-  const rightWordsEl = document.getElementById('stageRightWords');
-  const listDiv = document.getElementById('stageWordLists');
-  const leftWords = config.leftWords || [];
-  const rightWords = config.rightWords || [];
-  if(leftWords.length === 0 && rightWords.length === 0) {
-    listDiv.style.display = 'none';
-    return;
-  }
-  listDiv.style.display = 'grid';
-  leftWordsEl.innerHTML = leftWords.map(w => w).join('<br>');
-  rightWordsEl.innerHTML = rightWords.map(w => w).join('<br>');
+  // Hide the word list entirely — category names shown in header only
+  document.getElementById('stageWordLists').style.display = 'none';
 }
 
 function showStimulus() {
@@ -588,46 +621,54 @@ function calculatePopStdDev(values) {
 }
 
 function calculateIATScore() {
-  // Compatible = parts 3+4 (index 3 and 4), Incompatible = parts 6+7 (index 6 and 7)
-  const compatParts = [3, 4];
-  const incompatParts = [6, 7];
+  // D₁ = (RT_блок6 − RT_блок3) / SD(блок3∪блок6)
+  // D₂ = (RT_блок7 − RT_блок4) / SD(блок4∪блок7)
+  // D  = (D₁ + D₂) / 2
+  // Only correct responses, RT 300–3000ms
 
-  const compatRecords = records.filter(r => compatParts.includes(r.part_index) && r.correct === 1 && r.rt_ms >= 300 && r.rt_ms <= 3000);
-  const incompatRecords = records.filter(r => incompatParts.includes(r.part_index) && r.correct === 1 && r.rt_ms >= 300 && r.rt_ms <= 3000);
+  function filteredRT(partNums) {
+    return records.filter(r =>
+      partNums.includes(r.part_index) && r.correct === 1 &&
+      r.rt_ms >= 300 && r.rt_ms <= 3000
+    ).map(r => r.rt_ms);
+  }
+  function countAll(partNums) { return records.filter(r => partNums.includes(r.part_index)).length; }
+  function countCorrect(partNums) { return records.filter(r => partNums.includes(r.part_index) && r.correct===1).length; }
 
-  const compatTotal = records.filter(r => compatParts.includes(r.part_index)).length;
-  const incompatTotal = records.filter(r => incompatParts.includes(r.part_index)).length;
-  const compatCorrect = records.filter(r => compatParts.includes(r.part_index) && r.correct === 1).length;
-  const incompatCorrect = records.filter(r => incompatParts.includes(r.part_index) && r.correct === 1).length;
+  const rt3 = filteredRT([3]), rt4 = filteredRT([4]);
+  const rt6 = filteredRT([6]), rt7 = filteredRT([7]);
 
-  if(compatRecords.length === 0 || incompatRecords.length === 0) {
-    return { dScore: 0, interpretation: 'Тооцоолох боломжгүй', compatMean: 0, incompatMean: 0, pooledStdDev: 0, difference: 0,
-      compatCount: compatRecords.length, incompatCount: incompatRecords.length,
-      compatTotal, incompatTotal, compatCorrect, incompatCorrect,
-      compatAccuracy: 0, incompatAccuracy: 0 };
+  if(!rt3.length || !rt4.length || !rt6.length || !rt7.length) {
+    return { dScore:0, d1:0, d2:0, interpretation:'Тооцоолох боломжгүй',
+      rt3Mean:0,rt4Mean:0,rt6Mean:0,rt7Mean:0,sd36:0,sd47:0,
+      n3:0,n4:0,n6:0,n7:0,acc3:0,acc4:0,acc6:0,acc7:0 };
   }
 
-  const compatRT = compatRecords.map(r => r.rt_ms);
-  const incompatRT = incompatRecords.map(r => r.rt_ms);
-  const meanC = calculateMean(compatRT);
-  const meanI = calculateMean(incompatRT);
-  const pooled = calculatePopStdDev([...compatRT, ...incompatRT]);
-  const dScore = pooled > 0 ? (meanI - meanC) / pooled : 0;
+  const mean3=calculateMean(rt3), mean4=calculateMean(rt4);
+  const mean6=calculateMean(rt6), mean7=calculateMean(rt7);
+  const sd36 = calculatePopStdDev([...rt3,...rt6]);
+  const sd47 = calculatePopStdDev([...rt4,...rt7]);
+  const d1 = sd36 > 0 ? (mean6 - mean3) / sd36 : 0;
+  const d2 = sd47 > 0 ? (mean7 - mean4) / sd47 : 0;
+  const dScore = (d1 + d2) / 2;
+
+  function acc(p) { const a=countAll(p),c=countCorrect(p); return a>0?(c/a*100):0; }
 
   let interpretation;
-  if(dScore > 0.65) interpretation = 'Монгол улстай хүчтэй эерэг холбоо';
-  else if(dScore > 0.35) interpretation = 'Монгол улстай дунд зэргийн эерэг холбоо';
-  else if(dScore > 0.15) interpretation = 'Монгол улстай бага зэргийн эерэг холбоо';
+  if(dScore > 0.65)       interpretation = 'Монгол улстай хүчтэй эерэг холбоо';
+  else if(dScore > 0.35)  interpretation = 'Монгол улстай дунд зэргийн эерэг холбоо';
+  else if(dScore > 0.15)  interpretation = 'Монгол улстай бага зэргийн эерэг холбоо';
   else if(dScore > -0.15) interpretation = 'Төвийг сахисан';
   else if(dScore > -0.35) interpretation = 'Бага зэргийн сөрөг холбоо';
   else if(dScore > -0.65) interpretation = 'Дунд зэргийн сөрөг холбоо';
-  else interpretation = 'Хүчтэй сөрөг холбоо';
+  else                    interpretation = 'Хүчтэй сөрөг холбоо';
 
   return {
-    dScore, interpretation, compatMean: meanC, incompatMean: meanI, pooledStdDev: pooled, difference: meanI - meanC,
-    compatCount: compatRecords.length, incompatCount: incompatRecords.length,
-    compatTotal, incompatTotal, compatCorrect, incompatCorrect,
-    compatAccuracy: (compatCorrect/compatTotal)*100, incompatAccuracy: (incompatCorrect/incompatTotal)*100
+    dScore, d1, d2, interpretation,
+    rt3Mean:mean3, rt4Mean:mean4, rt6Mean:mean6, rt7Mean:mean7,
+    sd36, sd47,
+    n3:rt3.length, n4:rt4.length, n6:rt6.length, n7:rt7.length,
+    acc3:acc([3]), acc4:acc([4]), acc6:acc([6]), acc7:acc([7])
   };
 }
 
@@ -641,12 +682,19 @@ function toCSV(rows) {
   const iatLines = [
     '','=== IAT D-ОНОО ===',
     `D-Оноо,${iat.dScore.toFixed(6)}`,
+    `D1,${iat.d1.toFixed(6)}`,
+    `D2,${iat.d2.toFixed(6)}`,
     `Тайлбар,${iat.interpretation}`,
     `RT хязгаар: 300-3000 ms`,
-    `Нийцтэй (Монгол+Эерэг) дундаж,${iat.compatMean.toFixed(2)} ms`,
-    `Нийцгүй (Монгол+Сөрөг) дундаж,${iat.incompatMean.toFixed(2)} ms`,
-    `Нэгдсэн SD,${iat.pooledStdDev.toFixed(2)} ms`,
-    `D = (Нийцгүй - Нийцтэй) / SD = ${iat.dScore.toFixed(6)}`,
+    `Блок3 дундаж RT,${iat.rt3Mean.toFixed(2)} ms`,
+    `Блок4 дундаж RT,${iat.rt4Mean.toFixed(2)} ms`,
+    `Блок6 дундаж RT,${iat.rt6Mean.toFixed(2)} ms`,
+    `Блок7 дундаж RT,${iat.rt7Mean.toFixed(2)} ms`,
+    `SD(3+6),${iat.sd36.toFixed(2)} ms`,
+    `SD(4+7),${iat.sd47.toFixed(2)} ms`,
+    `D1=(RT6-RT3)/SD36 = ${iat.d1.toFixed(6)}`,
+    `D2=(RT7-RT4)/SD47 = ${iat.d2.toFixed(6)}`,
+    `D=(D1+D2)/2 = ${iat.dScore.toFixed(6)}`,
     `Эх оронч байдлын үнэлгээ,${patriotismAnswer}`,
     '========================'
   ].join('\n');
@@ -685,25 +733,33 @@ function renderCompletion(csv, filename) {
         <div style="font-size:13px;color:#555;">IAT D-Оноо</div>
         <div class="dscore-value">${iat.dScore.toFixed(4)}</div>
         <div class="dscore-interpretation">${iat.interpretation}</div>
-        <div style="font-size:12px;color:#666;margin-top:4px;">RT хязгаар: 300-3000 ms | Эх оронч байдал: ${patriotismAnswer}/10</div>
+        <div style="font-size:12px;color:#666;margin-top:4px;">RT хязгаар: 300–3000 ms | Эх оронч байдал: ${patriotismAnswer}/10</div>
         <div class="dscore-detail">
           <div class="dscore-card">
-            <h4>Нийцтэй хэсгүүд (3+4): Монгол+Эерэг / Гадаад+Сөрөг</h4>
-            <p>Нийт: ${iat.compatTotal} | Зөв: ${iat.compatCorrect}</p>
-            <p>Тооцоололд: ${iat.compatCount}</p>
-            <p>Дундаж: <strong>${iat.compatMean.toFixed(2)} ms</strong></p>
-            <p>Нарийвчлал: ${iat.compatAccuracy.toFixed(1)}%</p>
+            <h4>Блок 3 — Гадаад+Сөрөг(E) / Монгол+Эерэг(I)</h4>
+            <p>Тооцоололд: ${iat.n3} | Нарийвчлал: ${iat.acc3.toFixed(1)}%</p>
+            <p>Дундаж: <strong>${iat.rt3Mean.toFixed(0)} ms</strong></p>
           </div>
           <div class="dscore-card">
-            <h4>Нийцгүй хэсгүүд (6+7): Монгол+Сөрөг / Гадаад+Эерэг</h4>
-            <p>Нийт: ${iat.incompatTotal} | Зөв: ${iat.incompatCorrect}</p>
-            <p>Тооцоололд: ${iat.incompatCount}</p>
-            <p>Дундаж: <strong>${iat.incompatMean.toFixed(2)} ms</strong></p>
-            <p>Нарийвчлал: ${iat.incompatAccuracy.toFixed(1)}%</p>
+            <h4>Блок 4 — Гадаад+Сөрөг(E) / Монгол+Эерэг(I) тест</h4>
+            <p>Тооцоололд: ${iat.n4} | Нарийвчлал: ${iat.acc4.toFixed(1)}%</p>
+            <p>Дундаж: <strong>${iat.rt4Mean.toFixed(0)} ms</strong></p>
+          </div>
+          <div class="dscore-card">
+            <h4>Блок 6 — Монгол+Сөрөг(E) / Гадаад+Эерэг(I)</h4>
+            <p>Тооцоололд: ${iat.n6} | Нарийвчлал: ${iat.acc6.toFixed(1)}%</p>
+            <p>Дундаж: <strong>${iat.rt6Mean.toFixed(0)} ms</strong></p>
+          </div>
+          <div class="dscore-card">
+            <h4>Блок 7 — Монгол+Сөрөг(E) / Гадаад+Эерэг(I) тест</h4>
+            <p>Тооцоололд: ${iat.n7} | Нарийвчлал: ${iat.acc7.toFixed(1)}%</p>
+            <p>Дундаж: <strong>${iat.rt7Mean.toFixed(0)} ms</strong></p>
           </div>
         </div>
         <div class="dscore-formula">
-          <strong>D-Оноо:</strong> (${iat.incompatMean.toFixed(2)} − ${iat.compatMean.toFixed(2)}) ÷ ${iat.pooledStdDev.toFixed(2)} = <strong>${iat.dScore.toFixed(4)}</strong>
+          D₁ = (${iat.rt6Mean.toFixed(0)} − ${iat.rt3Mean.toFixed(0)}) ÷ ${iat.sd36.toFixed(0)} = <strong>${iat.d1.toFixed(4)}</strong><br>
+          D₂ = (${iat.rt7Mean.toFixed(0)} − ${iat.rt4Mean.toFixed(0)}) ÷ ${iat.sd47.toFixed(0)} = <strong>${iat.d2.toFixed(4)}</strong><br>
+          <strong>D = (D₁ + D₂) / 2 = ${iat.dScore.toFixed(4)}</strong>
         </div>
       </div>
       <div style="background:#f5f8fb;padding:12px;border-radius:8px;margin-bottom:12px;">
